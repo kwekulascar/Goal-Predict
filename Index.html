@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goal Predict | Football Predictions</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #08151f;
+  color: white;
+}
+
+header {
+  background: #102633;
+  padding: 22px;
+  text-align: center;
+  border-bottom: 2px solid #16c784;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+header span {
+  color: #16c784;
+}
+
+header p {
+  color: #aabdc7;
+  font-size: 13px;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 15px;
+}
+
+.card {
+  background: #122735;
+  border: 1px solid #294451;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 15px;
+}
+
+h2 {
+  font-size: 19px;
+  margin-top: 0;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin: 7px 0;
+  border-radius: 8px;
+  border: 1px solid #45606d;
+  background: #08151f;
+  color: white;
+  font-size: 16px;
+}
+
+button {
+  padding: 11px;
+  border: none;
+  border-radius: 8px;
+  background: #16c784;
+  color: #061b15;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.match {
+  background: #1a3442;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.match:hover,
+.match:focus {
+  background: #245366;
+}
+
+.league {
+  color: #9cb7c4;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 15px 0;
+}
+
+.tabs button {
+  background: #294451;
+  color: white;
+  white-space: nowrap;
+}
+
+.tabs button.active {
+  background: #16c784;
+  color: #061b15;
+}
+
+.market {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid #294451;
+}
+
+.market-name {
+  flex: 1;
+  font-size: 14px;
+}
+
+.probability {
+  color: #16c784;
+  font-weight: bold;
+}
+
+.notice {
+  background: #3b3020;
+  color: #ffe2a5;
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+
+.pick {
+  padding: 10px 0;
+  border-bottom: 1px solid #294451;
+  font-size: 14px;
+}
+
+.pick button {
+  margin-left: 8px;
+  background: #294451;
+  color: white;
+}
+
+footer {
+  text-align: center;
+  padding: 25px;
+  color: #91a9b5;
+  font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>⚽ GOAL <span>PREDICT</span></h1>
+  <p>Smart Football Analysis & Predictions</p>
+</header>
+
+<div class="container">
+
+  <div class="notice">
+    DEMO VERSION: Fixtures and probabilities are
+    fictional examples. Real football data and
+    statistical prediction models will be added later.
+  </div>
+
+  <div class="card">
+    <h2>🌍 Football Dashboard</h2>
+    <p>Explore football matches and prediction markets.</p>
+
+    <input
+      type="search"
+      id="search"
+      placeholder="Search teams or leagues"
+      oninput="showMatches()"
+    >
+
+    <select id="leagueFilter" onchange="showMatches()">
+      <option value="All">All Leagues</option>
+      <option value="Premier League">Premier League</option>
+      <option value="La Liga">La Liga</option>
+      <option value="Serie A">Serie A</option>
+      <option value="Bundesliga">Bundesliga</option>
+      <option value="Ligue 1">Ligue 1</option>
+    </select>
+  </div>
+
+  <div class="card">
+    <h2>⚽ Daily Match Explorer</h2>
+    <div id="matches"></div>
+  </div>
+
+  <div class="card">
+    <h2 id="selectedMatch">Select a Match</h2>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div id="predictions">
+      Select a match to view prediction markets.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📋 My Prediction Slip</h2>
+    <div id="slip">No selections yet.</div>
+    <br>
+    <button onclick="clearSlip()">Clear Selections</button>
+  </div>
+
+</div>
+
+<footer>
+  © 2026 Goal Predict.
+  Football statistics and probability analysis.
+  <br>
+  No prediction is guaranteed.
+</footer>
+
+<script>
+
+const matches = [
+  {
+    home: "Arsenal",
+    away: "Chelsea",
+    league: "Premier League"
+  },
+  {
+    home: "Barcelona",
+    away: "Sevilla",
+    league: "La Liga"
+  },
+  {
+    home: "Inter Milan",
+    away: "Napoli",
+    league: "Serie A"
+  },
+  {
+    home: "Bayern Munich",
+    away: "Dortmund",
+    league: "Bundesliga"
+  },
+  {
+    home: "PSG",
+    away: "Marseille",
+    league: "Ligue 1"
+  }
+];
+
+const markets = {
+  "Goals": [
+    ["Over 0.5 Goals", 94],
+    ["Over 1.5 Goals", 81],
+    ["Over 2.5 Goals", 63],
+    ["Over 3.5 Goals", 39],
+    ["Under 2.5 Goals", 37],
+    ["Under 3.5 Goals", 61]
+  ],
+
+  "Match Result": [
+    ["Home Win", 49],
+    ["Draw", 27],
+    ["Away Win", 24],
+    ["Double Chance 1X", 76],
+    ["Double Chance X2", 51]
+  ],
+
+  "BTTS": [
+    ["Both Teams Score - Yes", 65],
+    ["Both Teams Score - No", 35]
+  ],
+
+  "Corners": [
+    ["Over 7.5 Corners", 78],
+    ["Over 8.5 Corners", 69],
+    ["Over 9.5 Corners", 55],
+    ["Over 10.5 Corners", 43],
+    ["Under 10.5 Corners", 57]
+  ],
+
+  "Cards": [
+    ["Over 2.5 Cards", 79],
+    ["Over 3.5 Cards", 64],
+    ["Over 4.5 Cards", 48],
+    ["Under 5.5 Cards", 68]
+  ],
+
+  "Handicap": [
+    ["Home -0.5", 49],
+    ["Away +0.5", 51],
+    ["Home -1.5", 29],
+    ["Away +1.5", 71]
+  ]
+};
+
+let selectedMatch = null;
+let selectedMarket = "Goals";
+let slip = [];
+
+function showMatches() {
+  const search = document
+    .getElementById("search")
+    .value.toLowerCase();
+
+  const league = document
+    .getElementById("leagueFilter")
+    .value;
+
+  const container = document.getElementById("matches");
+  container.innerHTML = "";
+
+  matches.forEach((match, index) => {
+
+    const name = match.home + " vs " + match.away;
+
+    if (
+      !name.toLowerCase().includes(search) &&
+      !match.league.toLowerCase().includes(search)
+    ) {
+      return;
+    }
+
+    if (league !== "All" && match.league !== league) {
+      return;
+    }
+
+    const div = document.createElement("div");
+    div.className = "match";
+    div.tabIndex = 0;
+    div.setAttribute("role", "button");
+
+    const leagueName = document.createElement("div");
+    leagueName.className = "league";
+    leagueName.textContent = match.league;
+
+    const teams = document.createElement("strong");
+    teams.textContent = name;
+
+    div.appendChild(leagueName);
+    div.appendChild(teams);
+
+    div.onclick = () => selectMatch(index);
+
+    div.onkeydown = (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectMatch(index);
+      }
+    };
+
+    container.appendChild(div);
+  });
+
+  if (!container.children.length) {
+    container.textContent = "No sample matches found.";
+  }
+}
+
+function selectMatch(index) {
+  selectedMatch = index;
+
+  const match = matches[index];
+
+  document.getElementById("selectedMatch").textContent =
+    match.home + " vs " + match.away;
+
+  showTabs();
+  showPredictions();
+}
+
+function showTabs() {
+  const container = document.getElementById("tabs");
+  container.innerHTML = "";
+
+  Object.keys(markets).forEach(market => {
+
+    const button = document.createElement("button");
+    button.textContent = market;
+
+    if (market === selectedMarket) {
+      button.className = "active";
+    }
+
+    button.onclick = () => {
+      selectedMarket = market;
+      showTabs();
+      showPredictions();
+    };
+
+    container.appendChild(button);
+  });
+}
+
+function showPredictions() {
+  const container = document.getElementById("predictions");
+  container.innerHTML = "";
+
+  if (selectedMatch === null) {
+    container.textContent = "Select a match first.";
+    return;
+  }
+
+  markets[selectedMarket].forEach(item => {
+
+    const name = item[0];
+    const probability = item[1];
+
+    const row = document.createElement("div");
+    row.className = "market";
+
+    const title = document.createElement("span");
+    title.className = "market-name";
+    title.textContent = name;
+
+    const percent = document.createElement("span");
+    percent.className = "probability";
+    percent.textContent = probability + "%";
+
+    const button = document.createElement("button");
+    button.textContent = "+ Add";
+
+    button.onclick = () => {
+      addToSlip(name, probability);
+    };
+
+    row.appendChild(title);
+    row.appendChild(percent);
+    row.appendChild(button);
+
+    container.appendChild(row);
+  });
+}
+
+function addToSlip(name, probability) {
+  if (selectedMatch === null) return;
+
+  const match = matches[selectedMatch];
+
+  const matchName = match.home + " vs " + match.away;
+
+  const key = matchName + "|" + selectedMarket + "|" + name;
+
+  if (slip.some(item => item.key === key)) {
+    return;
+  }
+
+  slip.push({
+    key: key,
+    match: matchName,
+    market: selectedMarket,
+    name: name,
+    probability: probability
+  });
+
+  showSlip();
+}
+
+function showSlip() {
+  const container = document.getElementById("slip");
+  container.innerHTML = "";
+
+  if (slip.length === 0) {
+    container.textContent = "No selections yet.";
+    return;
+  }
+
+  slip.forEach((item, index) => {
+
+    const row = document.createElement("div");
+    row.className = "pick";
+
+    const text = document.createElement("span");
+    text.textContent =
+      item.match + " | " +
+      item.name + " | " +
+      item.probability + "%";
+
+    const remove = document.createElement("button");
+    remove.textContent = "Remove";
+
+    remove.onclick = () => {
+      slip.splice(index, 1);
+      showSlip();
+    };
+
+    row.appendChild(text);
+    row.appendChild(remove);
+
+    container.appendChild(row);
+  });
+}
+
+function clearSlip() {
+  slip = [];
+  showSlip();
+}
+
+showMatches();
+
+</script>
+
+</body>
+  </html>
