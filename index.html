@@ -3,9 +3,27 @@
 <title>Goal Predict V7 — Match Intelligence</title>
 <style>
 :root{color-scheme:dark;--bg:#071321;--panel:#11253a;--line:#29455e;--ink:#eef7ff;--muted:#aec5d7;--green:#56e4b2}*{box-sizing:border-box}body{margin:0;background:linear-gradient(140deg,#071321,#12314b);color:var(--ink);font:15px system-ui,sans-serif}header,main,footer{max-width:1150px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:center;gap:12px}.logo{font-size:1.5rem;font-weight:900}.logo span{color:var(--green)}.badge{border:1px solid #488a7b;border-radius:30px;padding:8px;color:var(--green)}h1{font-size:clamp(1.6rem,4vw,2.6rem);margin:12px 0 4px}h2{margin:0 0 12px;font-size:1.2rem}p{line-height:1.5}.muted,small{color:var(--muted)}.panel{background:#11253be8;border:1px solid var(--line);border-radius:17px;padding:18px;margin:16px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}label{display:block;color:var(--muted);font-size:.85rem}input,select,button{font:inherit;padding:11px;border-radius:9px;width:100%;margin-top:5px}input,select{background:#081a2c;color:white;border:1px solid #46637c}button{background:var(--green);border:0;color:#062c23;font-weight:800;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.secondary{background:#27485d;color:#fff}.inline{display:flex;flex-wrap:wrap;gap:8px}.inline button{width:auto}.card{padding:11px 14px;border:1px solid #35536a;background:#102238;border-radius:12px;margin:8px 0}.fixture-toggle{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0}.fixture-toggle::-webkit-details-marker{display:none}.fixture-toggle:after{content:"⌄";color:var(--green);font-size:1.6rem;transition:transform .2s}.card[open]>.fixture-toggle:after{transform:rotate(180deg)}.league-group{border:1px solid #35536a;border-radius:14px;margin:12px 0;background:#0c1e30;padding:8px 10px}.league-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;font-weight:800;padding:10px 5px;list-style:none}.league-heading::-webkit-details-marker{display:none}.league-heading:after{content:"⌄";font-size:1.5rem;color:var(--green)}.league-group:not([open])>.league-heading:after{transform:rotate(-90deg)}.league-count{font-size:.8rem;color:var(--muted);font-weight:400}.fixture-toggle .teams{font-size:1rem}.fixture-toggle .muted{font-size:.8rem}.card .marketgrid{margin-top:15px}.fixture-body{border-top:1px solid #35536a;margin-top:8px;padding-top:9px}.teams{font-size:1.08rem;font-weight:750}.marketgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px;margin-top:12px}.market{background:#1c4050;color:#e9fff6;border:1px solid #3a746d;text-align:left;font-size:.87rem;padding:10px}.market b{float:right}.notice{color:#ffdb9a}.success{color:#81f0bd}.pick{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #35536a;padding:10px 0}.pick:last-child{border:0}.pick button{width:auto}.tiny{font-size:.8rem}footer{font-size:.8rem;color:var(--muted)}@media(max-width:600px){header,main,footer{padding:14px}.panel{padding:13px}}
-</style></head><body>
+</style>
+<style id="stadium-edition">
+:root{--green:#23e68c!important;--muted:#b6c9d0!important}
+body{background:linear-gradient(180deg,rgba(3,13,23,.67),#07141d 440px),url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1800&q=80') center top/auto 520px no-repeat,#07141d!important;color:#f4fff9}
+header{background:rgba(3,16,24,.92)!important;border-bottom:1px solid #1d5a51;backdrop-filter:blur(10px)}
+main{max-width:1200px!important}
+main>h1{font-size:clamp(2rem,5vw,3.3rem);text-shadow:0 3px 18px #000;margin-top:36px}
+.panel{background:rgba(7,25,35,.94)!important;border:1px solid #245b58!important;box-shadow:0 12px 28px #0005;border-radius:16px!important}
+.card,.league-group{background:#102631!important;border-color:#2b5958!important}
+button:not(.secondary){background:linear-gradient(135deg,#16cf7c,#52f7a2)!important;color:#032719!important}
+button,.market{transition:filter .15s,transform .15s}
+button:active{transform:scale(.985)}
+button:hover{filter:brightness(1.12)}
+input,select{background:#0b222e!important;border:1px solid #396967!important}
+#fixtures .card{border-radius:12px}
+#top .pick{background:#102b32;border-radius:8px;padding:12px;margin:6px 0}
+@media(max-width:600px){main>h1{margin-top:25px}.panel{padding:14px!important}button{min-height:42px}}
+</style>
+</head><body>
 <header><div class="logo">⚽ Goal <span>Predict</span></div><div class="badge">VERSION 7 · BETA</div></header>
-<main><h1>Football match intelligence</h1><p class="muted">Real fixtures and experimental statistical estimates. Select all available leagues, explore markets, and build a virtual accumulator.</p>
+<main><h1>Your Football Prediction Hub</h1><p class="muted">Real fixtures and experimental statistical estimates. Select all available leagues, explore markets, and build a virtual accumulator.</p>
 <section class="panel"><h2>🌍 Fixtures & dates</h2><div class="grid">
 <label>Competition<select id="league"><option value="ALL">🌍 All available competitions</option></select></label>
 <label>Start date<input type="date" id="from"></label><label>End date<input type="date" id="to"></label>
