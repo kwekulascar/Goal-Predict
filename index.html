@@ -8,10 +8,10 @@
 .pred{grid-column:1/-1;border-top:1px solid #29425d;padding-top:12px}.probs{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:7px;margin:9px 0}.prob{background:#091b2e;border-radius:8px;padding:10px}.prob small{display:block;color:#aac0d4}.prob strong{font-size:1.2rem}.markets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.markets button{width:auto;background:#23465c;color:white;padding:8px}.markets button.active{background:#49e0ae;color:#062519}</style>
 </head>
 <body>
-<header><div class="brand">⚽ Goal <span>Predict</span></div><div class="pill">V4 · REAL FIXTURES + ESTIMATES</div></header>
+<header><div class="brand">⚽ Goal <span>Predict</span></div><div class="pill">V5 · FIXTURES + FORM MODEL</div></header>
 <main><h1>Football fixtures & predictions</h1><p class="sub">Choose a date and competition to see scheduled matches, live scores when available, and final results. Times are shown in your device's local time zone.</p>
 <section class="panel"><div class="controls"><div><label for="date">Match date</label><input type="date" id="date"></div><div><label for="league">Competition</label><select id="league"></select></div><div><label for="filter">Find a team</label><input id="filter" placeholder="Search team name"></div><div style="align-self:end"><button id="load">Load real matches</button></div></div><div class="quick"><button type="button" data-day="-1">Yesterday</button><button type="button" data-day="0">Today</button><button type="button" data-day="1">Tomorrow</button></div></section>
-<section class="panel"><div class="toprow"><div><h2 id="heading">Fixtures</h2><div class="meta" id="summary">Choose a date and load matches.</div></div><button id="refresh" style="width:auto">↻ Refresh</button></div><p class="notice" id="notice">This version retrieves actual match data from ESPN's publicly accessible football scoreboard feed. Coverage and availability vary by league; this is not an official guaranteed API. Estimates are displayed only when historical results are available.</p><div class="markets" id="markets"><button data-market="all" class="active">All</button><button data-market="1x2">1X2</button><button data-market="goals">Goals</button><button data-market="btts">BTTS</button></div><p class="meta" id="modelstatus">Historical results load after fixtures.</p><div id="cards" class="cards" aria-live="polite"></div></section>
+<section class="panel"><div class="toprow"><div><h2 id="heading">Fixtures</h2><div class="meta" id="summary">Choose a date and load matches.</div></div><button id="refresh" style="width:auto">↻ Refresh</button></div><p class="notice" id="notice">This version retrieves actual match data from ESPN's publicly accessible football scoreboard feed. Coverage and availability vary by league; this is not an official guaranteed API. Estimates are displayed only when historical results are available.</p><div class="markets" id="markets"><button data-market="all" class="active">All</button><button data-market="1x2">1X2</button><button data-market="goals">Goals</button><button data-market="btts">BTTS</button></div><p class="meta" id="modelstatus">Historical results load in weekly batches after fixtures.</p><div id="cards" class="cards" aria-live="polite"></div></section>
 </main><footer>Goal Predict is an independent football information project, not affiliated with ESPN or any football league. Scores and kickoff times may change. Data availability is not guaranteed. Statistical estimates are not betting odds or guarantees.</footer>
 <script>
 'use strict';
@@ -56,7 +56,7 @@ function renderPrediction(card,event){
  const box=document.createElement('div');box.className='pred';
  if(event.status?.type?.state!=='pre'){addText(box,'div','Predictions are for upcoming fixtures only.','meta');card.append(box);return}
  const p=estimates(event);
- if(!p){addText(box,'div','Prediction unavailable: insufficient recent results for one or both teams.','meta');card.append(box);return}
+ if(!p){addText(box,'div','Prediction unavailable: fewer than 3 usable past matches for one or both teams in the retrieved data.','meta');card.append(box);return}
  addText(box,'div','Statistical probabilities (not bookmaker odds)','status');
  const grid=document.createElement('div');grid.className='probs';
  for(const [name,value,group] of p.values){
@@ -88,16 +88,37 @@ try{const url=`https://site.api.espn.com/apis/site/v2/sports/soccer/${encodeURIC
  $('modelstatus').textContent='Loading recent completed matches for statistical estimates…';
  try{
  const end=new Date(day+'T12:00:00');end.setDate(end.getDate()-1);
- const start=new Date(end);start.setDate(start.getDate()-59);
+ const start=new Date(end);start.setDate(start.getDate()-62);
  const stamp=d=>`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
- const range=stamp(start)+'-'+stamp(end);
- const historyUrl=`https://site.api.espn.com/apis/site/v2/sports/soccer/${encodeURIComponent(code)}/scoreboard?dates=${range}&limit=1000`;
- const hist=await fetch(historyUrl,{cache:'no-store'});
- if(!hist.ok)throw Error('History unavailable');
- const parsed=await hist.json();
- if(req!==requestNumber)return;
- historyMatches=Array.isArray(parsed.events)?parsed.events:[];
- $('modelstatus').textContent=`${historyMatches.filter(x=>x.status?.type?.state==='post').length} completed league matches retrieved. Predictions need at least 3 per team.`;
+ 
+ // Fetch week-sized windows instead of assuming the scoreboard supports one 60-day response.
+ // Deduplicate by ESPN event ID and never include games on or after the selected fixture date.
+ const chunks=[];
+ for(let offset=0;offset<63;offset+=7){
+   const to=new Date(end);to.setDate(end.getDate()-offset);
+   const from=new Date(to);from.setDate(to.getDate()-6);
+   if(from<start)from.setTime(start.getTime());
+   chunks.push(stamp(from)+'-'+stamp(to));
+ }
+ const unique=new Map();let ok=0,failed=0;
+ // Three requests at a time to limit load on the unofficial data feed.
+ for(let i=0;i<chunks.length;i+=3){
+   const batch=chunks.slice(i,i+3);
+   const responses=await Promise.all(batch.map(async range=>{
+     const u=`https://site.api.espn.com/apis/site/v2/sports/soccer/${encodeURIComponent(code)}/scoreboard?dates=${range}&limit=500`;
+     try{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const d=await r.json();return Array.isArray(d.events)?d.events:null}catch(e){return null}
+   }));
+   if(req!==requestNumber)return;
+   for(const events of responses){
+     if(!events){failed++;continue}
+     ok++;for(const e of events){if(e.id)unique.set(String(e.id),e)}
+   }
+   historyMatches=[...unique.values()].filter(e=>e.status?.type?.state==='post'&&Date.parse(e.date)<Date.parse(day+'T00:00:00'));
+   $('modelstatus').textContent=`Loading history: ${Math.min(i+3,chunks.length)}/${chunks.length} weekly windows; ${historyMatches.length} completed matches so far.`;
+   render();
+ }
+ if(!ok)throw Error('No historical requests succeeded');
+ $('modelstatus').textContent=`${historyMatches.length} completed matches found across ${ok} weekly windows${failed?' ('+failed+' failed)':''}. At least 3 results per team are needed.`;
  }catch(e){if(req!==requestNumber)return;$('modelstatus').textContent='Historical match data unavailable. Predictions are hidden rather than invented.'}
  if(req===requestNumber)render()}
 catch(err){current=[];cards.replaceChildren();addText(cards,'div',`Could not retrieve real matches: ${err.message}. Check your internet connection or try another competition. No demo matches are shown.`,'empty');$('summary').textContent='Live data unavailable';$('notice').textContent='The football data feed may be temporarily unavailable, blocked by browser access rules, or unsupported for this league. No fictitious matches will be substituted.'}
