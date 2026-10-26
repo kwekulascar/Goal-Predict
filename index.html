@@ -21,10 +21,45 @@ input,select{background:#0b222e!important;border:1px solid #396967!important}
 #top .pick{background:#102b32;border-radius:8px;padding:12px;margin:6px 0}
 @media(max-width:600px){main>h1{margin-top:25px}.panel{padding:14px!important}button{min-height:42px}}
 </style>
+
+<style id="v81-responsive">
+:root{--green:#35ef9c}
+body{background:#06131c!important}
+header{max-width:none!important;padding:15px max(18px,calc((100vw - 1440px)/2))!important}
+main{max-width:1440px!important;display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:16px;align-items:start}
+main>h1,main>p{grid-column:1/-1}
+main>h1{margin:30px 0 0!important}
+main>p{margin:0 0 10px!important}
+main>.panel{margin:0!important;min-width:0}
+main>.panel:nth-of-type(1),main>.panel:nth-of-type(2){grid-column:1/-1}
+main>.panel:nth-of-type(3){grid-column:1;grid-row:5}
+main>.panel:nth-of-type(4){grid-column:2;grid-row:5;position:sticky;top:16px}
+main>.panel:nth-of-type(5){grid-column:1/-1}
+#fixtures{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px;align-items:start}
+#fixtures .league-group{margin:0}
+#top{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px}
+#top .pick{margin:0}
+.hero{grid-column:1/-1;position:relative;min-height:210px;border-radius:18px;overflow:hidden;display:flex;align-items:center;padding:32px;background:linear-gradient(90deg,#03131bed 3%,#06212b88 70%),url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1600&q=85') center/cover}
+.hero h2{font-size:clamp(1.7rem,4vw,3rem);margin:0 0 8px}
+.hero p{max-width:500px;margin:0;color:#d7eae4}
+.hero strong{color:#35ef9c}
+.market-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+.market-tabs button{width:auto!important;font-size:.8rem;padding:8px 12px}
+.market-tabs button[aria-pressed=true]{background:#36ed9b!important;color:#06291d!important}
+.market[disabled]{opacity:.45;cursor:not-allowed}
+@media(max-width:850px){
+ main{display:flex!important;flex-direction:column;gap:14px}
+ main>h1,main>p,main>.panel,.hero{width:100%;position:static!important}
+ #fixtures{display:block}
+ #fixtures .league-group{margin:10px 0}
+ .hero{min-height:175px;padding:22px}
+}
+@media(max-width:550px){header{padding:13px!important}.hero{min-height:150px}.hero h2{font-size:1.6rem}#top{display:block}main{padding:12px!important}}
+</style>
 </head><body>
 <header><div class="logo">⚽ Goal <span>Predict</span></div><div class="badge">VERSION 7 · BETA</div></header>
 <main><h1>Your Football Prediction Hub</h1><p class="muted">Real fixtures and experimental statistical estimates. Select all available leagues, explore markets, and build a virtual accumulator.</p>
-<section class="panel"><h2>🌍 Fixtures & dates</h2><div class="grid">
+<section class="hero"><div><h2>THE HOME OF <strong>SMART FOOTBALL</strong> PICKS</h2><p>Explore competitions, compare statistical estimates, and build your own virtual accumulator.</p></div></section><section class="panel"><h2>🌍 Fixtures & dates</h2><div class="grid">
 <label>Competition<select id="league"><option value="ALL">🌍 All available competitions</option></select></label>
 <label>Start date<input type="date" id="from"></label><label>End date<input type="date" id="to"></label>
 <label>Find a team<input id="search" placeholder="Search teams"></label>
@@ -87,7 +122,11 @@ function draw(){let shown=matchesForView();$('summary').textContent=`${shown.len
  for(const m of matches){let c=el('details',undefined,'card'),toggle=el('summary',undefined,'fixture-toggle'),title=el('div'),body=el('div',undefined,'fixture-body');
  title.append(el('div',team(m.homeTeam)+' vs '+team(m.awayTeam),'teams'),el('div',m.competitionName+' · '+new Date(m.date).toLocaleString()+' · '+m.status,'muted'));
  toggle.append(title);c.append(toggle);
- if(eligible(m)&&m.prediction){let grid=el('div',undefined,'marketgrid');const filter=$('marketfilter').value;m.prediction.markets.filter(p=>filter==='all'||p.group===filter).sort((a,b)=>b.p-a.p).forEach(p=>{let b=el('button',undefined,'market');b.append(el('span',p.label+' '),el('b',Math.round(p.p*100)+'%'));b.title='Add to virtual accumulator';b.onclick=()=>addPick(m,p);grid.append(b)});body.append(grid);body.append(el('small',`Tap a market to add to slip. Form history: ${m.prediction.h} home-team and ${m.prediction.a} away-team games.`))}else body.append(el('p',eligible(m)?'Insufficient prior completed matches for a forecast.':'No pre-match prediction for this match.','muted'));
+ if(eligible(m)&&m.prediction){let grid=el('div',undefined,'marketgrid');const filter='all';const tabs=el('div',undefined,'market-tabs');let active='all';
+ const groups=[['all','All'],['result','Results / Handicap'],['goals','Goals Over / Under'],['btts','BTTS Yes / No'],['combo','Combinations'],['corners','Corners · soon'],['cards','Cards · soon']];
+ const refresh=()=>{grid.replaceChildren();m.prediction.markets.filter(p=>active==='all'||p.group===active).sort((a,b)=>b.p-a.p).forEach(p=>{let b=el('button',undefined,'market');b.append(el('span',p.label+' '),el('b',Math.round(p.p*100)+'%'));b.title='Add to virtual accumulator';b.onclick=()=>addPick(m,p);grid.append(b)});if(!grid.children.length)grid.append(el('p','Market statistics not yet available.','muted'));};
+ groups.forEach(([id,name])=>{const t=el('button',name,'secondary');t.type='button';t.disabled=id==='corners'||id==='cards';t.setAttribute('aria-pressed',String(active===id));t.onclick=()=>{active=id;tabs.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===t)));refresh()};tabs.append(t)});
+ body.append(tabs);refresh();[].forEach(p=>{let b=el('button',undefined,'market');b.append(el('span',p.label+' '),el('b',Math.round(p.p*100)+'%'));b.title='Add to virtual accumulator';b.onclick=()=>addPick(m,p);grid.append(b)});body.append(grid);body.append(el('small',`Tap a market to add to slip. Form history: ${m.prediction.h} home-team and ${m.prediction.a} away-team games.`))}else body.append(el('p',eligible(m)?'Insufficient prior completed matches for a forecast.':'No pre-match prediction for this match.','muted'));
  c.append(body);group.append(c)}
  }
 }
