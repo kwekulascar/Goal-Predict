@@ -2,19 +2,73 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Goal Predict | Real Football Fixtures</title>
+<title>Goal Predict | Fixtures & Predictions</title>
 <style>
 :root{color-scheme:dark;--bg:#081323;--panel:#11243b;--line:#29425d;--text:#f0f6ff;--muted:#aac0d4;--accent:#49e0ae}*{box-sizing:border-box}body{margin:0;background:linear-gradient(140deg,#081323,#102843);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif}header,main,footer{max-width:1100px;margin:auto;padding:22px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand{font-weight:900;font-size:1.5rem}.brand span{color:var(--accent)}.pill{border:1px solid #367c70;border-radius:30px;padding:8px 12px;color:#a7f5d9;font-size:.85rem}h1{font-size:clamp(1.8rem,5vw,3.2rem);margin:12px 0}.sub{color:var(--muted);line-height:1.6}.panel{background:rgba(17,36,59,.95);border:1px solid var(--line);border-radius:18px;padding:18px;margin:18px 0}.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}label{display:block;color:var(--muted);font-size:.85rem;margin-bottom:6px}input,select,button{width:100%;font:inherit;border-radius:10px;padding:12px;background:#07172a;color:var(--text);border:1px solid #3a5671}button{background:var(--accent);color:#062519;border:0;font-weight:800;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.quick{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.quick button{width:auto;padding:9px 15px;background:#203e54;color:#fff}.toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.cards{display:grid;gap:12px}.card{background:#10243b;border:1px solid var(--line);border-radius:14px;padding:17px;display:grid;grid-template-columns:1fr auto;gap:12px}.teams{display:flex;flex-direction:column;gap:10px;font-weight:700}.team{display:flex;align-items:center;gap:9px}.team img{width:25px;height:25px;object-fit:contain}.meta{color:var(--muted);font-size:.85rem}.score{text-align:right;font-size:1.15rem;font-weight:800}.status{font-size:.78rem;color:var(--accent);margin-top:6px}.notice{color:#f4d89b;line-height:1.5}.empty{padding:25px;text-align:center;color:var(--muted)}a{color:#9cebd5}footer{color:var(--muted);font-size:.8rem;line-height:1.6}@media(max-width:550px){header,main,footer{padding:15px}.card{padding:13px}}
-</style>
+.pred{grid-column:1/-1;border-top:1px solid #29425d;padding-top:12px}.probs{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:7px;margin:9px 0}.prob{background:#091b2e;border-radius:8px;padding:10px}.prob small{display:block;color:#aac0d4}.prob strong{font-size:1.2rem}.markets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.markets button{width:auto;background:#23465c;color:white;padding:8px}.markets button.active{background:#49e0ae;color:#062519}</style>
 </head>
 <body>
-<header><div class="brand">⚽ Goal <span>Predict</span></div><div class="pill">REAL FIXTURES · NO DEMO MATCHES</div></header>
-<main><h1>Football fixtures around the world</h1><p class="sub">Choose a date and competition to see scheduled matches, live scores when available, and final results. Times are shown in your device's local time zone.</p>
+<header><div class="brand">⚽ Goal <span>Predict</span></div><div class="pill">V4 · REAL FIXTURES + ESTIMATES</div></header>
+<main><h1>Football fixtures & predictions</h1><p class="sub">Choose a date and competition to see scheduled matches, live scores when available, and final results. Times are shown in your device's local time zone.</p>
 <section class="panel"><div class="controls"><div><label for="date">Match date</label><input type="date" id="date"></div><div><label for="league">Competition</label><select id="league"></select></div><div><label for="filter">Find a team</label><input id="filter" placeholder="Search team name"></div><div style="align-self:end"><button id="load">Load real matches</button></div></div><div class="quick"><button type="button" data-day="-1">Yesterday</button><button type="button" data-day="0">Today</button><button type="button" data-day="1">Tomorrow</button></div></section>
-<section class="panel"><div class="toprow"><div><h2 id="heading">Fixtures</h2><div class="meta" id="summary">Choose a date and load matches.</div></div><button id="refresh" style="width:auto">↻ Refresh</button></div><p class="notice" id="notice">This version retrieves actual match data from ESPN's publicly accessible football scoreboard feed. Coverage and availability vary by league; this is not an official guaranteed API. No prediction probabilities are fabricated.</p><div id="cards" class="cards" aria-live="polite"></div></section>
-</main><footer>Goal Predict is an independent football information project, not affiliated with ESPN or any football league. Scores and kickoff times may change. Data availability is not guaranteed. This website does not currently provide statistical predictions.</footer>
+<section class="panel"><div class="toprow"><div><h2 id="heading">Fixtures</h2><div class="meta" id="summary">Choose a date and load matches.</div></div><button id="refresh" style="width:auto">↻ Refresh</button></div><p class="notice" id="notice">This version retrieves actual match data from ESPN's publicly accessible football scoreboard feed. Coverage and availability vary by league; this is not an official guaranteed API. Estimates are displayed only when historical results are available.</p><div class="markets" id="markets"><button data-market="all" class="active">All</button><button data-market="1x2">1X2</button><button data-market="goals">Goals</button><button data-market="btts">BTTS</button></div><p class="meta" id="modelstatus">Historical results load after fixtures.</p><div id="cards" class="cards" aria-live="polite"></div></section>
+</main><footer>Goal Predict is an independent football information project, not affiliated with ESPN or any football league. Scores and kickoff times may change. Data availability is not guaranteed. Statistical estimates are not betting odds or guarantees.</footer>
 <script>
 'use strict';
+
+let historyMatches=[],market='all',requestNumber=0;
+document.querySelectorAll('[data-market]').forEach(b=>b.onclick=()=>{market=b.dataset.market;document.querySelectorAll('[data-market]').forEach(x=>x.classList.toggle('active',x===b));render()});
+function probability(k,l){let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p}
+function estimates(event){
+ const t=event.competitions?.[0]?.competitors||[];
+ const home=t.find(x=>x.homeAway==='home'),away=t.find(x=>x.homeAway==='away');
+ if(!home?.team?.id||!away?.team?.id)return null;
+ const cutoff=Date.parse(event.date);
+ function form(id){
+ const results=[];
+ for(const e of historyMatches){
+ if(e.status?.type?.state!=='post'||Date.parse(e.date)>=cutoff)continue;
+ const ts=e.competitions?.[0]?.competitors||[];
+ const me=ts.find(x=>String(x.team?.id)===String(id));
+ const op=ts.find(x=>String(x.team?.id)!==String(id));
+ if(!me||!op)continue;
+ const gf=Number(me.score?.value??me.score),ga=Number(op.score?.value??op.score);
+ if(Number.isFinite(gf)&&Number.isFinite(ga))results.push({date:Date.parse(e.date),gf,ga});
+ }
+ results.sort((a,b)=>b.date-a.date);
+ const recent=results.slice(0,8);
+ if(recent.length<3)return null;
+ return {n:recent.length,gf:recent.reduce((a,b)=>a+b.gf,0)/recent.length,ga:recent.reduce((a,b)=>a+b.ga,0)/recent.length};
+ }
+ const h=form(home.team.id),a=form(away.team.id);
+ if(!h||!a)return null;
+ const clamp=x=>Math.min(3.5,Math.max(.3,x));
+ const hg=clamp(.65*(h.gf+a.ga)/2+.35*1.45),ag=clamp(.65*(a.gf+h.ga)/2+.35*1.15);
+ let w=0,d=0,l=0,o15=0,o25=0,btts=0,total=0;
+ for(let i=0;i<=12;i++)for(let j=0;j<=12;j++){
+ const p=probability(i,hg)*probability(j,ag);total+=p;
+ if(i>j)w+=p;else if(i===j)d+=p;else l+=p;
+ if(i+j>=2)o15+=p;if(i+j>=3)o25+=p;if(i>0&&j>0)btts+=p;
+ }
+ return {values:[['Home win',w/total,'1x2'],['Draw',d/total,'1x2'],['Away win',l/total,'1x2'],['Over 1.5',o15/total,'goals'],['Over 2.5',o25/total,'goals'],['BTTS Yes',btts/total,'btts']],h:h.n,a:a.n};
+}
+function renderPrediction(card,event){
+ const box=document.createElement('div');box.className='pred';
+ if(event.status?.type?.state!=='pre'){addText(box,'div','Predictions are for upcoming fixtures only.','meta');card.append(box);return}
+ const p=estimates(event);
+ if(!p){addText(box,'div','Prediction unavailable: insufficient recent results for one or both teams.','meta');card.append(box);return}
+ addText(box,'div','Statistical probabilities (not bookmaker odds)','status');
+ const grid=document.createElement('div');grid.className='probs';
+ for(const [name,value,group] of p.values){
+ if(market!=='all'&&market!==group)continue;
+ const item=document.createElement('div');item.className='prob';
+ addText(item,'small',name);addText(item,'strong',Math.round(value*100)+'%');grid.append(item);
+ }
+ box.append(grid);
+ addText(box,'div',`Based on ${p.h} and ${p.a} recent completed team matches in this competition. Simplified Poisson model with goal-rate smoothing. Estimates are uncertain and not guarantees.`,'meta');
+ card.append(box);
+}
+
 const competitions=[
 ['eng.1','England · Premier League'],['eng.2','England · Championship'],['eng.fa','England · FA Cup'],['esp.1','Spain · La Liga'],['esp.2','Spain · Segunda'],['ger.1','Germany · Bundesliga'],['ger.2','Germany · 2. Bundesliga'],['ita.1','Italy · Serie A'],['ita.2','Italy · Serie B'],['fra.1','France · Ligue 1'],['fra.2','France · Ligue 2'],['ned.1','Netherlands · Eredivisie'],['por.1','Portugal · Primeira Liga'],['sco.1','Scotland · Premiership'],['bel.1','Belgium · Pro League'],['tur.1','Türkiye · Süper Lig'],['uefa.champions','Europe · Champions League'],['uefa.europa','Europe · Europa League'],['uefa.europa.conf','Europe · Conference League'],['usa.1','USA/Canada · MLS'],['mex.1','Mexico · Liga MX'],['bra.1','Brazil · Série A'],['arg.1','Argentina · Primera División'],['col.1','Colombia · Primera A'],['chi.1','Chile · Primera División'],['per.1','Peru · Liga 1'],['uru.1','Uruguay · Primera División'],['jpn.1','Japan · J1 League'],['kor.1','South Korea · K League 1'],['aus.1','Australia · A-League'],['chn.1','China · Super League'],['ind.1','India · Super League'],['ksa.1','Saudi Arabia · Pro League'],['rsa.1','South Africa · Premiership'],['egy.1','Egypt · Premier League'],['caf.champions','Africa · CAF Champions League'],['fifa.world','International · World Cup']
 ];
@@ -28,9 +82,24 @@ function safeText(x){return x==null?'':String(x)}
 function addText(parent,tag,text,className){const e=document.createElement(tag);e.textContent=safeText(text);if(className)e.className=className;parent.append(e);return e}
 function render(){cards.replaceChildren();const term=$('filter').value.trim().toLowerCase();const matches=current.filter(e=>{const names=(e.competitions?.[0]?.competitors||[]).map(t=>t.team?.displayName||'').join(' ');return names.toLowerCase().includes(term)});$('summary').textContent=`${matches.length} match(es) shown · ${current.length} returned for selected league and date`;
 if(!matches.length){addText(cards,'div',current.length?'No teams match your search.':'No fixtures returned for this competition and date. Try another league or date.','empty');return}
-for(const event of matches){const c=event.competitions?.[0],ts=c?.competitors||[];const card=document.createElement('article');card.className='card';const left=document.createElement('div');addText(left,'div',c?.league?.name||event.league?.name||league.selectedOptions[0].textContent,'meta');const teams=document.createElement('div');teams.className='teams';for(const t of ts){const row=document.createElement('div');row.className='team';const logo=t.team?.logo;if(logo&&/^https:\/\//.test(logo)){const img=document.createElement('img');img.src=logo;img.alt='';img.loading='lazy';row.append(img)}addText(row,'span',t.team?.displayName||'Unknown team');teams.append(row)}left.append(teams);const dt=new Date(event.date);addText(left,'div',Number.isNaN(dt.getTime())?'Time not available':dt.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),'meta');const right=document.createElement('div');right.className='score';const state=event.status?.type?.state||'pre';if(state==='pre')addText(right,'div','vs');else addText(right,'div',ts.map(t=>t.score??'-').join(' – '));addText(right,'div',event.status?.type?.shortDetail||event.status?.type?.description||'Scheduled','status');card.append(left,right);cards.append(card)}}
-async function load(){const day=date.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(day)){alert('Choose a valid date');return}const code=league.value;const btn=$('load');btn.disabled=true;$('refresh').disabled=true;cards.replaceChildren();addText(cards,'div','Loading verified fixture feed…','empty');$('heading').textContent=`${league.selectedOptions[0].textContent} · ${day}`;$('notice').textContent='Loading real football data. Match coverage depends on the selected competition.';
-try{const url=`https://site.api.espn.com/apis/site/v2/sports/soccer/${encodeURIComponent(code)}/scoreboard?dates=${day.replaceAll('-','')}&limit=500`;const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`Data source returned HTTP ${response.status}`);const data=await response.json();if(!Array.isArray(data.events))throw new Error('The data source did not return a valid match list');current=data.events.filter(e=>{const d=new Date(e.date);return !Number.isNaN(d.getTime())&&localISO(d)===day});$('notice').textContent='Actual fixtures and scores from ESPN’s public scoreboard feed. Some competitions may be unsupported or incomplete. Match dates are filtered in your device time zone. This is not an official guaranteed data service.';render()}
+for(const event of matches){const c=event.competitions?.[0],ts=c?.competitors||[];const card=document.createElement('article');card.className='card';const left=document.createElement('div');addText(left,'div',c?.league?.name||event.league?.name||league.selectedOptions[0].textContent,'meta');const teams=document.createElement('div');teams.className='teams';for(const t of ts){const row=document.createElement('div');row.className='team';const logo=t.team?.logo;if(logo&&/^https:\/\//.test(logo)){const img=document.createElement('img');img.src=logo;img.alt='';img.loading='lazy';row.append(img)}addText(row,'span',t.team?.displayName||'Unknown team');teams.append(row)}left.append(teams);const dt=new Date(event.date);addText(left,'div',Number.isNaN(dt.getTime())?'Time not available':dt.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),'meta');const right=document.createElement('div');right.className='score';const state=event.status?.type?.state||'pre';if(state==='pre')addText(right,'div','vs');else addText(right,'div',ts.map(t=>t.score??'-').join(' – '));addText(right,'div',event.status?.type?.shortDetail||event.status?.type?.description||'Scheduled','status');card.append(left,right);renderPrediction(card,event);cards.append(card)}}
+async function load(){const req=++requestNumber;historyMatches=[];const day=date.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(day)){alert('Choose a valid date');return}const code=league.value;const btn=$('load');btn.disabled=true;$('refresh').disabled=true;cards.replaceChildren();addText(cards,'div','Loading verified fixture feed…','empty');$('heading').textContent=`${league.selectedOptions[0].textContent} · ${day}`;$('notice').textContent='Loading real football data. Match coverage depends on the selected competition.';
+try{const url=`https://site.api.espn.com/apis/site/v2/sports/soccer/${encodeURIComponent(code)}/scoreboard?dates=${day.replaceAll('-','')}&limit=500`;const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`Data source returned HTTP ${response.status}`);const data=await response.json();if(!Array.isArray(data.events))throw new Error('The data source did not return a valid match list');current=data.events.filter(e=>{const d=new Date(e.date);return !Number.isNaN(d.getTime())&&localISO(d)===day});$('notice').textContent='Actual fixtures and scores from ESPN’s public scoreboard feed. Some competitions may be unsupported or incomplete. Match dates are filtered in your device time zone. This is not an official guaranteed data service.';render();
+ $('modelstatus').textContent='Loading recent completed matches for statistical estimates…';
+ try{
+ const end=new Date(day+'T12:00:00');end.setDate(end.getDate()-1);
+ const start=new Date(end);start.setDate(start.getDate()-59);
+ const stamp=d=>`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+ const range=stamp(start)+'-'+stamp(end);
+ const historyUrl=`https://site.api.espn.com/apis/site/v2/sports/soccer/${encodeURIComponent(code)}/scoreboard?dates=${range}&limit=1000`;
+ const hist=await fetch(historyUrl,{cache:'no-store'});
+ if(!hist.ok)throw Error('History unavailable');
+ const parsed=await hist.json();
+ if(req!==requestNumber)return;
+ historyMatches=Array.isArray(parsed.events)?parsed.events:[];
+ $('modelstatus').textContent=`${historyMatches.filter(x=>x.status?.type?.state==='post').length} completed league matches retrieved. Predictions need at least 3 per team.`;
+ }catch(e){if(req!==requestNumber)return;$('modelstatus').textContent='Historical match data unavailable. Predictions are hidden rather than invented.'}
+ if(req===requestNumber)render()}
 catch(err){current=[];cards.replaceChildren();addText(cards,'div',`Could not retrieve real matches: ${err.message}. Check your internet connection or try another competition. No demo matches are shown.`,'empty');$('summary').textContent='Live data unavailable';$('notice').textContent='The football data feed may be temporarily unavailable, blocked by browser access rules, or unsupported for this league. No fictitious matches will be substituted.'}
 finally{btn.disabled=false;$('refresh').disabled=false}}
 $('load').addEventListener('click',load);$('refresh').addEventListener('click',load);$('filter').addEventListener('input',render);league.addEventListener('change',load);date.addEventListener('change',load);load();
